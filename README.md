@@ -119,3 +119,11 @@ The `loading.tsx` file will automatically be used as a fallback while a `page.ts
 To prevent `loading.tsx` from being used for every route that comes after it, you can use `Route Groups`. Moving the `loading.tsx` and `page.tsx` files to a folder with parenthesis around it's name will organize the files into a logical group without affecting the URL path structure.
 
 `/dashboard/(overview)/page.tsx` will still be `/dashboard`.
+
+### Chapter 10
+
+`Partial prerendering (PPR)` is an experimental feature introduced in Next 14 that allows you to combine static rendering, dynamic rendering, and streaming in the same route.
+
+When a user visits a route with PPR, a static shell is sent to the client with holes where dynamic content will be loaded asynchronously. The async holes are streamed in parallel.
+
+Next will know which parts of your app are dynamic when they're wrapped in `Suspense` components
