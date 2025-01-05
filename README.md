@@ -66,3 +66,56 @@ The `useRouter` hook can be used to prefetch programmatically.
 Next has a client-side cache called the `Router Cache`. When the user navigates through the app, prefetched and visited routes are stored in the cache, which is reused as much as possible instead of making requests to the server.
 
 By default, Next preserves the scroll position of a page for back and forwards navigation.
+
+### Chapter 7
+
+There are a few cases where you want to use an API as an intermediary layer between the application and the database, such as when using a third party API or when fetching data from the client to avoid exposing the database to the client.
+
+You can skip using an API layer when using `React Server Components`.
+
+When making multiple data request in this manner, they are blocking each other creating a `request waterfall`.
+
+```js
+const revenue = await fetchRevenue();
+const latestInvoices = await fetchLatestInvoices();
+const { ...data } = await fetchCardData();
+```
+
+There are some cases when this is necessary, such as when one request depends on data retrieved from a previous request.
+
+You can enable parallel data fetching using JS `Promise.all()`. However, there are some disadvantages to this method.
+
+#### Route Handlers
+
+You can create custom request handlers for routes using `Route Handlers`.
+
+Route handlers are defined in a `route.ts` file inside the app directory. They can be nested anywhere inside app, similar to `page.tsx` and `layout.tsx`, but they cannot be in the same route segment level as `page.tsx`, since both of them take over all HTTP verbs for that route.
+
+```js
+// route.ts
+export async function GET(request: Request) {}
+```
+
+Route handlers are not cached by default. You can opt into caching GET requests, and only GET requests.
+
+They do not participate in layouts or client side navigation.
+
+### Chapter 8
+
+Static rendering is when data fetching and rendering happens on the server at build time. This is not ideal for sites where the data is regularly updated.
+
+The solution is to use dynamic rendering. With dynamic rendering, content is rendered at request time. It also allows accessing information that's only available at request time, such as cookies or URL search params.
+
+### Chapter 9
+
+A common problem with dynamic rendering is that the application is only as fast as your slowest data fetch. This can be fixed with `streaming`.
+
+Streaming breaks down a route into chunks and progressively stream them from the server to the client. With streaming, you can prevent slow data requests from slowing down the entire app, as the page will load part by part.
+
+You can stream an entire page using the `loading.tsx` file, or a component with React's `Suspense`.
+
+The `loading.tsx` file will automatically be used as a fallback while a `page.tsx` file is loading.
+
+To prevent `loading.tsx` from being used for every route that comes after it, you can use `Route Groups`. Moving the `loading.tsx` and `page.tsx` files to a folder with parenthesis around it's name will organize the files into a logical group without affecting the URL path structure.
+
+`/dashboard/(overview)/page.tsx` will still be `/dashboard`.
