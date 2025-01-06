@@ -127,3 +127,69 @@ To prevent `loading.tsx` from being used for every route that comes after it, yo
 When a user visits a route with PPR, a static shell is sent to the client with holes where dynamic content will be loaded asynchronously. The async holes are streamed in parallel.
 
 Next will know which parts of your app are dynamic when they're wrapped in `Suspense` components
+
+### Chapter 11
+
+The search functionality span the client and the server. When a user searches for an invoice, the url parameters will be updated on the client, which will be kept in sync with the server, which then uses the params to fetch and render the new data on the client.
+
+This is accomplished using the following Next hooks and the JS URLSearchParams API.
+
+`useSearchParams` allows accessing the current parameters of the URL. `dashboard/invoices?page=1&query=pending` would look like this: `{page: '1', query: 'pending'}`.
+
+`usePathname` lets you read the current URL's pathname. Would return `/dashboard/invoices`
+
+`useRouter` enables programmatic client side navigation.
+
+`URLSearchParams` provides methods for manipulating the URL query parameters.
+
+```js
+// search.tsx
+
+const params = new URLSearchParams(searchParams);
+
+// sets the value of the parameter called 'query'
+params.set('query', term);
+
+// params.toString() converts params to a string of all
+// the query params. eg. 'page=1&query=hello'
+replace(`${pathname}?${params.toString()}`);
+```
+
+The input field is kept in sync with the URL using the defaultValue attribute. `defaultValue={searchParams.get('query')?.toString()}`. Keep in mind to use `defaultValue` instead of `value`, since this is not a controlled component.
+
+Next's page components accept an optional `searchParams` prop, which is a promise that resolves to an object containing the search parameters of the current URL. This prop can be used to get any query parameter. In this case, the parameter called 'query' is retrieved and passed to the table component, which that component uses to fetch invoices on the server.
+
+```js
+export default async function InvoicesTable({
+  query,
+  currentPage,
+}: {
+  query: string;
+  currentPage: number;
+}) {
+  const invoices = await fetchFilteredInvoices(query, currentPage);
+...
+```
+
+There were two methods used to get the search parameters, the `useSearchParams` hook and the `searchParams` prop. In general, you would use `searchParams` on the server and `useSearchParams` on the client.
+
+Now, when searching for an invoice, every keystroke you make sends a request to the server. This can be fixed using a method called `debouncing`. There are many ways to implement it, but in this case, the `use-debounce` package is used.
+
+```js
+import { useDebouncedCallback } from 'use-debounce';
+
+// Inside the Search Component...
+const handleSearch = useDebouncedCallback((term) => {
+	const params = new URLSearchParams(searchParams);
+	if (term) {
+		params.set('query', term);
+	} else {
+		params.delete('query');
+	}
+	replace(`${pathname}?${params.toString()}`);
+}, 300);
+```
+
+The `handleSearch` function is called 300ms after the user stops typing.
+
+All the same methods are used to implement pagination as well.
