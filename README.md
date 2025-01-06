@@ -193,3 +193,60 @@ const handleSearch = useDebouncedCallback((term) => {
 The `handleSearch` function is called 300ms after the user stops typing.
 
 All the same methods are used to implement pagination as well.
+
+### Chapter 12
+
+#### React Server Actions
+
+React Server Actions allows you to write asynchronous functions that execute on the server and are called by the client or server. They eliminate the need for API endpoints for mutating data.
+
+Server Actions offer security solutions and techniques like POST requests, encrypted closures, strict input checks, error message hashing, and host restrictions.
+
+The `'use server'` directive is used to declare either a file or an async function as a server actions, which then allows them to be used by the client or the server.
+
+An advantage of invoking a server action in a server component is `progressive enhancement`, meaning forms will be submitted even if JS hasn't loaded yet or is disabled.
+
+Server Actions are not limited to forms and can be invoked from event handlers, useEffect, third-party libraries, and other form elements like buttons.
+
+Actions use the POST method, and only this method can invoke them.
+
+They're integrated with Next's caching and revalidation architecture.
+
+##### Creating data
+
+These are the steps taken to create a new invoice:
+
+1. Create a form to capture the user's input.
+2. Create a Server Action and invoke it from the form.
+3. Inside your Server Action, extract the data from the formData object.
+4. Validate and prepare the data to be inserted into your database.
+5. Insert the data and handle any errors.
+6. Revalidate the cache and redirect the user back to invoices page.
+
+##### Updating data
+
+These are the steps taken to update an invoice:
+
+1. Create a new dynamic route segment with the invoice id.
+2. Read the invoice id from the page params.
+3. Fetch the specific invoice from your database.
+4. Pre-populate the form with the invoice data.
+5. Update the invoice data in your database.
+
+Invoking a server action and passing data like this: `<form action={updateInvoice(id)}>`, will not work. Instead, you must use the JS bind method.
+
+```js
+const updateInvoiceWithId = updateInvoice.bind(null, invoice.id);
+
+return <form action={updateInvoiceWithId}></form>;
+```
+
+##### Deleting data
+
+The id must be bound here as well.
+
+```js
+const deleteInvoiceWithId = deleteInvoice.bind(null, id);
+
+<form action={deleteInvoiceWithId}>
+```
