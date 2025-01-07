@@ -351,3 +351,104 @@ export async function createInvoice(prevState: State, formData: FormData) {
 	redirect('/dashboard/invoices');
 }
 ```
+
+### Chapter 15
+
+In this project, [`NextAuth.js`](https://authjs.dev/reference/nextjs) is used to implement authentication.
+
+```js
+export const authConfig = {
+	// Used to specify the route for custom sign-in, sign-out, and error pages.
+	pages: {
+		// redirects user to our login page instead of NextAuth's default page
+		signIn: '/login',
+	},
+	/*
+	The 'authorized' callback is used to verify if a request is authorized to
+	access a page via Next.js middleware. It is called before a request is
+	completed, and it receives an object with the auth and request properties.
+	The auth property contains the user's session, and the request property
+	contains the incoming request.
+	*/
+	callbacks: {
+		authorized({ auth, request: { nextUrl } }) {
+			const isLoggedIn = !!auth?.user;
+			const isOnDashboard = nextUrl.pathname.startsWith('/dashboard');
+			if (isOnDashboard) {
+				if (isLoggedIn) return true;
+				return false; // Redirect unauthenticated users to login page
+			} else if (isLoggedIn) {
+				return Response.redirect(new URL('/dashboard', nextUrl));
+			}
+			return true;
+		},
+	},
+	// used to define different login options. Credentials, Google, Github, etc.
+	providers: [],
+} satisfies NextAuthConfig;
+```
+
+The advantage of using middleware for this task is that protected routes will not start rendering until middleware verifies the authentication.
+
+```js
+import NextAuth from 'next-auth';
+import { authConfig } from './auth.config';
+
+export default NextAuth(authConfig).auth;
+
+export const config = {
+	// https://nextjs.org/docs/app/building-your-application/routing/middleware#matcher
+	// specify which routes the middleware will run on
+	matcher: ['/((?!api|_next/static|_next/image|.*\\.png$).*)'],
+};
+```
+
+```js
+// auth.ts
+Credentials({
+	async authorize(credentials) {
+		// validate user input with zod
+		const parsedCredentials = z
+			.object({ email: z.string().email(), password: z.string().min(6) })
+			.safeParse(credentials);
+
+		// get user from database and compare against user input
+		if (parsedCredentials.success) {
+			const { email, password } = parsedCredentials.data;
+			const user = await getUser(email);
+			if (!user) return null;
+			const passwordsMatch = await bcrypt.compare(password, user.password);
+
+			if (passwordsMatch) return user;
+		}
+
+		console.log('Invalid credentials');
+		return null;
+	},
+}),
+```
+
+A react server action is used to authenticate the user. This action is called from the login form (`app/ui/login-form.tsx`).
+
+```js
+export async function authenticate(
+	prevState: string | undefined,
+	formData: FormData
+) {
+	try {
+		await signIn('credentials', formData);
+	} catch (error) {
+		if (error instanceof AuthError) {
+			switch (error.type) {
+				case 'CredentialsSignin':
+					return 'Invalid credentials.';
+				default:
+					return 'Something went wrong.';
+			}
+		}
+		throw error;
+	}
+}
+```
+
+Signing out is done using the `signOut()` function from `NextAuth`.
