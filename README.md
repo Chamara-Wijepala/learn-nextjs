@@ -276,3 +276,78 @@ Unexpected errors should be handled by throwing exceptions, which are then handl
 Implement error boundaries using `error.tsx` and `global-error.tsx` to handle unexpected errors and provide a fallback UI.
 
 `global-error` is used to handle errors in the root layout. Global error UI must define its own `<html>` and `<body>` tags, since it is replacing the root layout or template when active.
+
+### Chapter 14
+
+Next includes `eslint-plugin-jsx-a11y` by default. To use it, add a script that runs `next lint`. This plugin helps to find accessibility issues.
+
+#### useActionState
+
+[`useActionState`](https://react.dev/reference/react/useActionState) takes three arguments and returns an array with three values.
+
+```js
+const [state, formAction, isPending] = useActionState(action, initialState, permalink?);
+```
+
+However, `isPending` and `permalink` aren't used in the example.
+
+The `action` is the server action function and the `initialState` is anything you define, in this case, an object with the following format: `{ message: null, errors: {} }`
+
+The returned `state` is the object that contains the errors that are returned from the action.
+
+```js
+if (!validatedFields.success) {
+	return {
+		errors: validatedFields.error.flatten().fieldErrors,
+		message: 'Missing Fields. Failed to Create Invoice.',
+	};
+}
+```
+
+In the action file:
+
+- zod is used to validate the user input
+- if input is invalid, return the errors (the `state` returned by `useActionState` in this example)
+- prepare and insert the valid input to the database
+- revalidate the cache and redirect the user
+
+```js
+export async function createInvoice(prevState: State, formData: FormData) {
+	// Validate form using Zod
+	const validatedFields = CreateInvoice.safeParse({
+		customerId: formData.get('customerId'),
+		amount: formData.get('amount'),
+		status: formData.get('status'),
+	});
+
+	// If form validation fails, return errors early. Otherwise, continue.
+	if (!validatedFields.success) {
+		return {
+			errors: validatedFields.error.flatten().fieldErrors,
+			message: 'Missing Fields. Failed to Create Invoice.',
+		};
+	}
+
+	// Prepare data for insertion into the database
+	const { customerId, amount, status } = validatedFields.data;
+	const amountInCents = amount * 100;
+	const date = new Date().toISOString().split('T')[0];
+
+	// Insert data into the database
+	try {
+		await sql`
+      INSERT INTO invoices (customer_id, amount, status, date)
+      VALUES (${customerId}, ${amountInCents}, ${status}, ${date})
+    `;
+	} catch (error) {
+		// If a database error occurs, return a more specific error.
+		return {
+			message: 'Database Error: Failed to Create Invoice.',
+		};
+	}
+
+	// Revalidate the cache for the invoices page and redirect the user.
+	revalidatePath('/dashboard/invoices');
+	redirect('/dashboard/invoices');
+}
+```
