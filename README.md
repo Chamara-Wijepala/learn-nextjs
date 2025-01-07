@@ -250,3 +250,29 @@ const deleteInvoiceWithId = deleteInvoice.bind(null, id);
 
 <form action={deleteInvoiceWithId}>
 ```
+
+### Chapter 13
+
+The `error.tsx` file is used as a catch-all error handler for your route segments. This file needs to be a client component.
+
+It accepts two props, `error` and `reset`. `reset` is a function that will re-render the route segment when called.
+
+The `notFound` function is used to render the `not-found.tsx` file to handle 404 errors. This takes precedence over `error.tsx`.
+
+Errors can be divided into 'expected errors' and 'uncaught exceptions'.
+
+#### Expected Errors
+
+Expected errors should be modeled as return values and returned to the client rather than thrown exceptions.
+
+Server action error should be handled using `useActionState` instead of try/catch.
+
+In server components, the error can be returned or the page can be redirected.
+
+#### Uncaught Exceptions
+
+Unexpected errors should be handled by throwing exceptions, which are then handled by error boundaries.
+
+Implement error boundaries using `error.tsx` and `global-error.tsx` to handle unexpected errors and provide a fallback UI.
+
+`global-error` is used to handle errors in the root layout. Global error UI must define its own `<html>` and `<body>` tags, since it is replacing the root layout or template when active.
