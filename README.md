@@ -452,3 +452,66 @@ export async function authenticate(
 ```
 
 Signing out is done using the `signOut()` function from `NextAuth`.
+
+### Chapter 16
+
+`Open Graph` metadata enhances the way a site is displayed when shared on social media. Providing information such as a title, description, and a preview image.
+
+There are two ways to add metadata: `config-based` and `file-based`.
+
+Putting the `favicon.ico` and `opengraph-image.jpg` inside `/app` will automatically use them as the favicon and opengraph images. This is the `file-based` method.
+
+To use the `config` method, export a static `metadata` object or a dynamic [`generateMetadata`](https://nextjs.org/docs/app/api-reference/functions/generate-metadata) function from a `layout.tsx` or `page.tsx` file. They are only supported in server components. You cannot use both methods on the same route segment.
+
+A key difference is that, on initial load, streaming is blocked until `generateMetadata` has fully resolved.
+
+```js
+// app/layout.tsx
+export const metadata: Metadata = {
+	title: {
+		// The template will be used on any route that declares a title using the
+		// metadata object, like below.
+		template: '%s | Acme Dashboard',
+		default: 'Acme Dashboard',
+	},
+	description: 'The official Next.js Course Dashboard, built with App Router.',
+	metadataBase: new URL('https://next-learn-dashboard.vercel.sh'),
+};
+
+// app/dashboard/invoices/page.tsx
+export const metadata: Metadata = {
+	title: 'Invoices',
+};
+```
+
+Dynamic metadata depends on dynamic information, such as the current route parameters, external data, or metadata in parent segments.
+
+```js
+type Props = {
+  params: Promise<{ id: string }>
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>
+}
+
+export async function generateMetadata(
+  { params, searchParams }: Props,
+  parent: ResolvingMetadata
+): Promise<Metadata> {
+  // read route params
+  const id = (await params).id
+
+  // fetch data
+  const product = await fetch(`https://.../${id}`).then((res) => res.json())
+
+  // optionally access and extend (rather than replace) parent metadata
+  const previousImages = (await parent).openGraph?.images || []
+
+  return {
+    title: product.title,
+    openGraph: {
+      images: ['/some-specific-page-image.jpg', ...previousImages],
+    },
+  }
+}
+
+export default function Page({ params, searchParams }: Props) {}
+```
